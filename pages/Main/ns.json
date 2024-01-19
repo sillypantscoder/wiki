@@ -1,0 +1,4 @@
+{
+	"fields": ["title", "content"],
+	"content": "# {{field title Untitled}}\n{{field content There is currently no text in this page.}}"
+}
