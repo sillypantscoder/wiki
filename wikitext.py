@@ -37,6 +37,18 @@ class TextSpan:
 					currentType = TextSpan
 				else:
 					currentType = TextSpanItalic
+			elif line[i:i + 2] == "[[":
+				spans.append(currentType(current))
+				current = ""
+				# Get the link data
+				idata = ""
+				i += 2
+				while line[i:i + 2] != "]]":
+					idata += line[i]
+					i += 1
+				i += 1
+				# Add the span
+				spans.append(TextSpanLink(idata, "/wiki/" + idata))
 			else:
 				current += line[i]
 			i += 1
@@ -53,6 +65,13 @@ class TextSpanBold(TextSpan):
 class TextSpanItalic(TextSpan):
 	def toHTML(self):
 		return f"<i>{self.t}</i>"
+
+class TextSpanLink(TextSpan):
+	def __init__(self, t: str, href: str):
+		super().__init__(t)
+		self.href = href
+	def toHTML(self):
+		return f"<a href=\"{self.href}\">{self.t}</a>"
 
 class Paragraph:
 	def __init__(self, t: list[TextSpan]):

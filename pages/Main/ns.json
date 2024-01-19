@@ -1,5 +1,5 @@
 {
 	"fields": ["title", "content"],
 	"defaultPage": "Main_Page",
-	"content": "$END<div class=\"sidebar\"><a href=\"/wiki/\">Wiki home</a><a href=\"/edit/select/{{pagens}}:{{pagename}}\">Edit page</a></div><div class=\"main-content\">\n<h5 style=\"margin: 0; padding: 0; color: gray; font-weight: normal;\">{{pagens}}:{{pagename}}</h5>\n<h1 style=\"margin-top: 0;\">{{field title $pagename}}</h1>\n$START{{field content There is currently no text in this page. Press the edit button on the left to add some.}}$END\n</div>"
+	"content": "$END<div class=\"sidebar\"><a href=\"/wiki/\" class=\"button\">Wiki home</a><a href=\"/edit/select/{{pagens}}:{{pagename}}\" class=\"button\">Edit page</a></div><div class=\"main-content\">\n<h5 style=\"margin: 0; padding: 0; color: gray; font-weight: normal;\">{{pagens}}:{{pagename}}</h5>\n<h1 style=\"margin-top: 0;\">{{field title $pagename}}</h1>\n$START{{field content There is currently no text in this page. Press the edit button on the left to add some.}}$END\n</div>"
 }

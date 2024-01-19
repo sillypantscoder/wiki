@@ -86,7 +86,7 @@ def getWiki(path: str, body: bytes) -> HTTPResponse:
 		return {
 			"status": 302,
 			"headers": {
-				"Location": "/wiki/" + json.loads(config)["defaultNS"]
+				"Location": "/wiki/" + json.loads(config)["defaultNS"] + (":" + path if len(path) > 0 else "")
 			},
 			"content": b""
 		}
@@ -144,11 +144,11 @@ def getEditSelect(path: str, body: bytes) -> HTTPResponse:
 	</head>
 	<body>
 		<div class="sidebar">
-			<a href="/wiki/{path}">Cancel - Back to page</a>
+			<a href="/wiki/{path}" class="button">Cancel - Back to page</a>
 		</div>
 		<div class="main-content">
 			<h3>Edit {path}</h3>
-			{"".join(['<p><a href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields])}
+			{"".join(['<p><a class="button" href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields])}
 		</div>
 	</body>
 </html>""".encode("UTF-8")
@@ -183,7 +183,7 @@ def getEditContent(path: str, body: bytes) -> HTTPResponse:
 	</head>
 	<body>
 		<div class="sidebar">
-			<a href="/wiki/{name}" class="back_link">Cancel - Back to page</a>
+			<a href="/wiki/{name}" class="back_link button">Cancel - Back to page</a>
 		</div>
 		<div class="main-content">
 			<h3>Edit {contentname} of {name}</h3>
