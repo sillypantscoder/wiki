@@ -4,6 +4,7 @@ import wiki
 import wikitext
 import utils
 import json
+import os
 
 hostName = "0.0.0.0"
 serverPort = 8080
@@ -242,6 +243,49 @@ def getData(path: str, body: bytes) -> HTTPResponse:
 		"content": pageData[contentname] if contentname in pageData.keys() else b""
 	}
 
+def getInfoList(path: str, body: bytes) -> HTTPResponse:
+	title = "List of pages in namespace " + path
+	items: list[str] = []
+	if path == "":
+		# Namespace List
+		title = "Namespace List"
+		items = [
+			f'<p><a href="/wiki_info/list/{name}">{name}</a></p>'
+			for name in os.listdir("pages")
+		]
+	else:
+		# Page List
+		if os.path.exists("pages/" + path):
+			items = [
+				f'<p><a href="/wiki/{path}:{name[:-4]}">{name[:-4]}</a></p>'
+				for name in os.listdir("pages/" + path)
+				if name != "ns.json"
+			]
+		else:
+			items = ["<p>The namespace does not exist!</p>"]
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/html"
+		},
+		"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/" class="button">Wiki home</a>
+			<a href="/wiki_info/home" class="button">Wiki info</a>
+		</div>
+		<div class="main-content">
+			<h2>{title}</h2>
+			{"".join(items)}
+		</div>
+	</body>
+</html>""".encode("UTF-8")
+	}
+
 GET = HTTPDirective()
 GET.then("style.css").run(lambda path, body: {
 	"status": 200,
@@ -254,6 +298,69 @@ GET.then("wiki").run(getWiki)
 GET.then("edit").then("select").run(getEditSelect)
 GET.after("edit").then("content").run(getEditContent)
 GET.then("get_data").run(getData)
+GET.then("wiki_info").then("home").run(lambda path, body: {
+	"status": 200,
+	"headers": {
+		"Content-Type": "text/html"
+	},
+	"content": b"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/" class="button">Wiki home</a>
+		</div>
+		<div class="main-content">
+			<h2>Wiki Info</h2>
+			<p><a href="/wiki_info/list/">Namespace List</a></p>
+			<p><a href="/wiki_info/create">Create New Page</a></p>
+		</div>
+	</body>
+</html>"""
+})
+GET.after("wiki_info").then("list").run(getInfoList)
+GET.after("wiki_info").then("create").run(lambda path, body: {
+	"status": 200,
+	"headers": {
+		"Content-Type": "text/html"
+	},
+	"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/" class="button">Wiki home</a>
+			<a href="/wiki_info/home" class="button">Wiki info</a>
+		</div>
+		<div class="main-content">
+			<h2>Create Page</h2>
+			<p>Namespace: <select id="ns">{"".join(["<option>" + x + "</option>" for x in os.listdir("pages")])}</select></p>
+			<p>Page Name: <input type="text" id="name"></p>
+			<p>Enter a message for your changes: <input type="text" id="message"></p>
+			<p><button onclick="create()">Create!</button></p>
+			<script>
+function create() {{
+	var ns = document.querySelector("#ns").value
+	var newname = document.querySelector("#name").value
+	if (newname.match(/^[A-Za-z0-9_]+$/) == null) {{
+		alert("Please only include alphanumerics and underscores in your name")
+		return
+	}}
+	var message = document.querySelector("#message").value
+	var x = new XMLHttpRequest()
+	x.open("POST", "/create")
+	x.addEventListener("loadend", () => location.replace("/wiki/"+newname))
+	x.send(ns + "\\n" + newname + "\\n" + message)
+}}
+			</script>
+		</div>
+	</body>
+</html>""".encode("UTF-8")
+})
 
 def postEdit(path: str, body: bytes) -> HTTPResponse:
 	name = path.split("/")[0]
@@ -282,8 +389,29 @@ def postEdit(path: str, body: bytes) -> HTTPResponse:
 		"content": b""
 	}
 
+def postCreate(path: str, body: bytes) -> HTTPResponse:
+	ns_name = body.split(b"\n")[0].decode("UTF-8")
+	pagename = body.split(b"\n")[1].decode("UTF-8")
+	message = body.split(b"\n")[2].decode("UTF-8")
+	ns = wiki.Namespace.fromFile(ns_name)
+	if ns == None: return {
+		"status": 400,
+		"headers": {},
+		"content": b""
+	}
+	page = wiki.PageHistory(ns, pagename, [
+		(message, wiki.Page(ns, pagename, {}))
+	])
+	page.save()
+	return {
+		"status": 200,
+		"headers": {},
+		"content": b""
+	}
+
 POST = HTTPDirective()
 POST.then("edit").run(postEdit)
+POST.then("create").run(postCreate)
 
 class MyServer(BaseHTTPRequestHandler):
 	def do_GET(self):
