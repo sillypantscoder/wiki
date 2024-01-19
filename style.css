@@ -1,0 +1,17 @@
+html {
+	height: 100%;
+}
+body {
+	margin: 0;
+	font-family: sans-serif;
+	height: 100%;
+	display: flex;
+}
+.sidebar {
+	max-width: 40%;
+	min-width: 20%;
+	flex-grow: 1;
+}
+.main-content {
+	flex-grow: 1;
+}

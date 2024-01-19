@@ -22,8 +22,10 @@ class Namespace:
 		self.fields = fields
 		self.content = content
 	@staticmethod
-	def fromFile(name: str):
-		data = json.loads(utils.read_file(f"pages/{name}/ns.json"))
+	def fromFile(name: str) -> "Namespace | None":
+		raw = utils.read_file(f"pages/{name}/ns.json")
+		if raw == None: return
+		data = json.loads(raw)
 		return Namespace(name, data["fields"], data["content"])
 	def getContent(self, page: "Page"):
 		r = ""
@@ -72,11 +74,14 @@ class PageHistory:
 		filename = f"pages/{self.ns.name}/{self.name}.dat"
 		utils.write_file(filename, data)
 	@staticmethod
-	def fromFile(name: str):
+	def fromFile(name: str) -> "PageHistory | None":
 		ns = name.split(":")[0]
 		pn = name.split(":")[1]
 		nso = Namespace.fromFile(ns)
-		raw = Buffer(utils.read_file(f"pages/{ns}/{pn}.dat"))
+		if nso == None: return
+		raw_data = utils.read_file(f"pages/{ns}/{pn}.dat")
+		if raw_data == None: return PageHistory(nso, pn, [])
+		raw = Buffer(raw_data)
 		out: list[tuple[str, Page]] = []
 		while raw.canRead():
 			out.append(PageHistory.readOneEntry(nso, pn, raw))
@@ -93,6 +98,8 @@ class PageHistory:
 		# Return
 		return (message, page)
 	def mostRecent(self):
+		if len(self.data) == 0:
+			return Page(self.ns, self.name, {})
 		return self.data[-1][1]
 
 class Page:
@@ -139,6 +146,7 @@ class Page:
 
 if __name__ == "__main__":
 	ns = Namespace.fromFile("Main")
+	if ns == None: exit()
 	h = PageHistory(ns, "Main_Page", [
 		("Create main page", Page(ns, "Main_Page", {
 			"title": b"Main Page",

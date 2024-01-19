@@ -75,5 +75,6 @@ def wtToHTML(inputStr: str) -> str:
 	return "".join(r)
 
 if __name__ == "__main__":
-	s = TextSpan.read("Hi *there* whee")
-	print("".join([x.toHTML() for x in s]))
+	# s = TextSpan.read("Hi *there* whee")
+	# print("".join([x.toHTML() for x in s]))
+	print(wtToHTML("# hi"))
