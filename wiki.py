@@ -49,7 +49,13 @@ class Namespace:
 				if name in page.data.keys():
 					r += page.data[name].decode("UTF-8")
 				else:
-					r += defaultval
+					r += defaultval.replace("$pagename", page.name)
+			elif self.content[charno:charno + len("{{pagens}}")] == "{{pagens}}":
+				charno += len("{{pagens}}") - 1
+				r += page.ns.name
+			elif self.content[charno:charno + len("{{pagename}}")] == "{{pagename}}":
+				charno += len("{{pagename}}") - 1
+				r += page.name
 			else:
 				r += char
 			charno += 1

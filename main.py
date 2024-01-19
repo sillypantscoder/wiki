@@ -23,6 +23,11 @@ class HTTPDirective:
 		return n
 	def run(self, func: typing.Callable[[ str, bytes ], HTTPResponse]):
 		self.directions = func
+	def after(self, name: str):
+		if isinstance(self.directions, dict):
+			return self.directions[name]
+		else:
+			return self
 	def get(self, path: list[str], body: bytes) -> HTTPResponse | None:
 		if len(path) == 0:
 			if not isinstance(self.directions, dict):
@@ -112,6 +117,120 @@ def getWiki(path: str, body: bytes) -> HTTPResponse:
 </html>""".encode("UTF-8")
 	}
 
+def getEditSelect(path: str, body: bytes) -> HTTPResponse:
+	if len(path.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(path)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/html"
+		},
+		"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/{path}">Cancel - Back to page</a>
+		</div>
+		<div class="main-content">
+			<h3>Edit {path}</h3>
+			{"".join(['<p><a href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields])}
+		</div>
+	</body>
+</html>""".encode("UTF-8")
+	}
+
+def getEditContent(path: str, body: bytes) -> HTTPResponse:
+	name = path.split("/")[0]
+	contentname = path.split("/")[1]
+	if len(name.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(name)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/html"
+		},
+		"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/{name}">Cancel - Back to page</a>
+		</div>
+		<div class="main-content">
+			<h3>Edit {contentname} of {name}</h3>
+			<p><textarea id="content" value="Loading..." disabled></textarea></p>
+			<p><button onclick="saveEdit()">Save</button><button onclick="cancelEdit()">Cancel</button></p>
+		</div>
+		<script>
+(() => {{
+	var x = new XMLHttpRequest();
+	x.open("GET", "/get_data/{name}/{contentname}")
+	x.addEventListener("loadend", () => {{
+		document.querySelector("#content").value = x.responseText
+		document.querySelector("#content").disabled = false
+	}})
+	x.send()
+}})();
+		</script>
+	</body>
+</html>""".encode("UTF-8")
+	}
+
+def getData(path: str, body: bytes) -> HTTPResponse:
+	name = path.split("/")[0]
+	contentname = path.split("/")[1]
+	if len(name.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(name)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	pageData = history.mostRecent().data
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/plain"
+		},
+		"content": pageData[contentname] if contentname in pageData.keys() else b""
+	}
+
 GET = HTTPDirective()
 GET.then("style.css").run(lambda path, body: {
 	"status": 200,
@@ -121,7 +240,9 @@ GET.then("style.css").run(lambda path, body: {
 	"content": utils.optional(utils.read_file("style.css"), b"")
 })
 GET.then("wiki").run(getWiki)
-# GET.then("edit").run(getEdit)
+GET.then("edit").then("select").run(getEditSelect)
+GET.after("edit").then("content").run(getEditContent)
+GET.then("get_data").run(getData)
 
 class MyServer(BaseHTTPRequestHandler):
 	def do_GET(self):
