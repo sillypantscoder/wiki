@@ -183,12 +183,13 @@ def getEditContent(path: str, body: bytes) -> HTTPResponse:
 	</head>
 	<body>
 		<div class="sidebar">
-			<a href="/wiki/{name}">Cancel - Back to page</a>
+			<a href="/wiki/{name}" class="back_link">Cancel - Back to page</a>
 		</div>
 		<div class="main-content">
 			<h3>Edit {contentname} of {name}</h3>
 			<p><textarea id="content" value="Loading..." disabled></textarea></p>
-			<p><button onclick="saveEdit()">Save</button><button onclick="cancelEdit()">Cancel</button></p>
+			<p>Enter a message for your changes: <input id="message"></p>
+			<p><button onclick="saveEdit()">Save</button></p>
 		</div>
 		<script>
 (() => {{
@@ -200,6 +201,16 @@ def getEditContent(path: str, body: bytes) -> HTTPResponse:
 	}})
 	x.send()
 }})();
+function saveEdit() {{
+	var content = document.querySelector("#content").value
+	var message = document.querySelector("#message").value
+	var x = new XMLHttpRequest()
+	x.open("POST", "/edit/{name}/{contentname}")
+	x.addEventListener("loadend", () => {{
+		document.querySelector(".back_link").click()
+	}})
+	x.send(message + "\\n" + content)
+}}
 		</script>
 	</body>
 </html>""".encode("UTF-8")
@@ -244,6 +255,36 @@ GET.then("edit").then("select").run(getEditSelect)
 GET.after("edit").then("content").run(getEditContent)
 GET.then("get_data").run(getData)
 
+def postEdit(path: str, body: bytes) -> HTTPResponse:
+	name = path.split("/")[0]
+	contentname = path.split("/")[1]
+	message = body.split(b"\n")[0].decode("UTF-8")
+	newcontent = b"\n".join(body.split(b"\n")[1:])
+	if len(name.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(name)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history.appendEdit(message, contentname, newcontent)
+	history.save()
+	return {
+		"status": 200,
+		"headers": {},
+		"content": b""
+	}
+
+POST = HTTPDirective()
+POST.then("edit").run(postEdit)
+
 class MyServer(BaseHTTPRequestHandler):
 	def do_GET(self):
 		global running
@@ -256,7 +297,7 @@ class MyServer(BaseHTTPRequestHandler):
 		if isinstance(c, str): c = c.encode("utf-8")
 		self.wfile.write(c)
 	def do_POST(self):
-		res = GET.root_post(self.path, self.rfile.read(int(self.headers["Content-Length"])))
+		res = POST.root_post(self.path, self.rfile.read(int(self.headers["Content-Length"])))
 		self.send_response(res["status"])
 		for h in res["headers"]:
 			self.send_header(h, res["headers"][h])

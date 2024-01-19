@@ -4,13 +4,26 @@ class TextSpan:
 	def toHTML(self):
 		return self.t
 	@staticmethod
-	def read(line: str):
+	def read(line: str, raw: bool) -> "tuple[list[TextSpan], bool]":
 		spans: "list[TextSpan]" = []
 		currentType: "type[TextSpan]" = TextSpan
+		if raw: currentType = TextSpanRaw
 		current = ""
 		i = 0
 		while i < len(line):
-			if line[i] == "*":
+			if line[i:i + len("$END")] == "$END":
+				spans.append(currentType(current))
+				current = ""
+				i += len("$END") - 1
+				currentType = TextSpanRaw
+			elif line[i:i + len("$START")] == "$START":
+				spans.append(currentType(current))
+				current = ""
+				i += len("$START") - 1
+				currentType = TextSpan
+			elif currentType == TextSpanRaw:
+				current += line[i]
+			elif line[i] == "*":
 				spans.append(currentType(current))
 				current = ""
 				if currentType == TextSpanBold:
@@ -28,7 +41,10 @@ class TextSpan:
 				current += line[i]
 			i += 1
 		spans.append(currentType(current))
-		return spans
+		return (spans, currentType == TextSpanRaw)
+
+class TextSpanRaw(TextSpan):
+	pass
 
 class TextSpanBold(TextSpan):
 	def toHTML(self):
@@ -61,12 +77,17 @@ class Heading1(Paragraph):
 def parse(inputStr: str) -> list[Paragraph]:
 	lines = inputStr.split("\n")
 	paras: list[Paragraph] = []
+	raw = False
 	for line in lines:
 		if line == "": continue
 		if line.startswith("# "):
-			paras.append(Heading1(TextSpan.read(line[2:])))
+			info = TextSpan.read(line[2:], raw)
+			raw = info[1]
+			paras.append(Heading1(info[0]))
 		else:
-			paras.append(Paragraph(TextSpan.read(line)))
+			info = TextSpan.read(line, raw)
+			raw = info[1]
+			paras.append(Paragraph(info[0]))
 	return paras
 
 def wtToHTML(inputStr: str) -> str:

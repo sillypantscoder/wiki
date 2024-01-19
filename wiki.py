@@ -108,6 +108,13 @@ class PageHistory:
 		if len(self.data) == 0:
 			return Page(self.ns, self.name, {})
 		return self.data[-1][1]
+	def append(self, message: str, data: dict[str, bytes]):
+		self.data.append((message, Page(self.ns, self.name, data)))
+	def appendEdit(self, message: str, editName: str, editValue: bytes):
+		oldPage = self.mostRecent()
+		newData = oldPage.data.copy()
+		newData[editName] = editValue
+		self.append(message, newData)
 
 class Page:
 	def __init__(self, ns: Namespace, name: str, data: dict[str, bytes]):
@@ -133,7 +140,7 @@ class Page:
 			r.extend([*value])
 		return r
 	@staticmethod
-	def read(ns: Namespace, name: str, b: Buffer):
+	def read(ns: Namespace, pagename: str, b: Buffer):
 		entries: dict[str, bytes] = {}
 		# Read # of entries
 		n_entries = b.readInt()
@@ -149,7 +156,7 @@ class Page:
 			val = b.read(vall)
 			# Finish
 			entries[name] = val
-		return Page(ns, name, entries)
+		return Page(ns, pagename, entries)
 
 if __name__ == "__main__":
 	ns = Namespace.fromFile("Main")
