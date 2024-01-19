@@ -1,4 +1,5 @@
 {
 	"fields": ["title", "content"],
+	"defaultPage": "Main_Page",
 	"content": "<div class=\"sidebar\"></div><div class=\"main-content\">\n# {{field title Untitled}}\n{{field content There is currently no text in this page.}}\n</div>"
 }

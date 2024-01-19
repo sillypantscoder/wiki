@@ -17,16 +17,17 @@ class Buffer:
 		return self.pos < len(self.data) - 1
 
 class Namespace:
-	def __init__(self, name: str, fields: list[str], content: str):
+	def __init__(self, name: str, fields: list[str], defaultPage: str, content: str):
 		self.name = name
 		self.fields = fields
+		self.defaultPage = defaultPage
 		self.content = content
 	@staticmethod
 	def fromFile(name: str) -> "Namespace | None":
 		raw = utils.read_file(f"pages/{name}/ns.json")
 		if raw == None: return
 		data = json.loads(raw)
-		return Namespace(name, data["fields"], data["content"])
+		return Namespace(name, data["fields"], data["defaultPage"], data["content"])
 	def getContent(self, page: "Page"):
 		r = ""
 		charno = 0

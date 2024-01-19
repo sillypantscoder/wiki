@@ -3,6 +3,7 @@ import typing
 import wiki
 import wikitext
 import utils
+import json
 
 hostName = "0.0.0.0"
 serverPort = 8080
@@ -61,14 +62,38 @@ class HTTPDirective:
 		return r
 
 def getWiki(path: str, body: bytes) -> HTTPResponse:
+	if len(path.split(":")) == 1:
+		# A single name...
+		# Check if this name is a namespace
+		ns = wiki.Namespace.fromFile(path)
+		if ns != None:
+			# Return the default page
+			return {
+				"status": 302,
+				"headers": {
+					"Location": "/wiki/" + ns.name + ":" + ns.defaultPage
+				},
+				"content": b""
+			}
+		# Check if this is a page in the default namespace
+		config = utils.read_file("settings.json")
+		assert config != None
+		return {
+			"status": 302,
+			"headers": {
+				"Location": "/wiki/" + json.loads(config)["defaultNS"]
+			},
+			"content": b""
+		}
 	history = wiki.PageHistory.fromFile(path)
-	if history == None: return {
-		"status": 404,
-		"headers": {
-			"Content-Type": "text/html"
-		},
-		"content": b""
-	}
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {
+				"Content-Type": "text/html"
+			},
+			"content": b""
+		}
 	page: wiki.Page = history.mostRecent()
 	content: str = wikitext.wtToHTML(page.getContent())
 	return {
