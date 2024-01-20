@@ -7,7 +7,7 @@ import json
 import os
 
 hostName = "0.0.0.0"
-serverPort = 8080
+serverPort = 8086
 
 class HTTPResponse(typing.TypedDict):
 	status: int
@@ -114,6 +114,50 @@ def getWiki(path: str, body: bytes) -> HTTPResponse:
 	</head>
 	<body>
 		{content}
+	</body>
+</html>""".encode("UTF-8")
+	}
+
+def getWikiHistory(path: str, body: bytes) -> HTTPResponse:
+	if len(path.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(path)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	rs = ""
+	for entry in history.data:
+		rs += '<hr><p>' + entry[0] + '</p><hr>'
+		w = wikitext.wtToHTML(entry[1].getContent())
+		w = w[w.index("<div class=\"main-content\">") + len("<div class=\"main-content\">"):w.rindex("</div>")]
+		print(w)
+		rs += w
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/html"
+		},
+		"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/{path}" class="button">Back to page</a>
+		</div>
+		<div class="main-content">
+			<h3>View history of {path}</h3>
+			{rs}
+		</div>
 	</body>
 </html>""".encode("UTF-8")
 	}
@@ -295,6 +339,7 @@ GET.then("style.css").run(lambda path, body: {
 	"content": utils.optional(utils.read_file("style.css"), b"")
 })
 GET.then("wiki").run(getWiki)
+GET.then("wiki_history").run(getWikiHistory)
 GET.then("edit").then("select").run(getEditSelect)
 GET.after("edit").then("content").run(getEditContent)
 GET.then("get_data").run(getData)
