@@ -113,7 +113,13 @@ def getWiki(path: str, body: bytes) -> HTTPResponse:
 		<link href="/style.css" rel="stylesheet">
 	</head>
 	<body>
-		{content}
+		<div class=\"sidebar\">
+			<a href=\"/wiki/\" class=\"button\">Wiki home</a>
+			<a href=\"/wiki_info/home\" class=\"button\">Wiki info</a>
+			<a href=\"/edit/select/{page.ns.name}:{page.name}\" class=\"button\">Edit page</a>
+			<a href=\"/wiki_history/{page.ns.name}:{page.name}\" class=\"button\">View page history</a>
+		</div>
+		<div class=\"main-content\">{content}</div>
 	</body>
 </html>""".encode("UTF-8")
 	}
@@ -137,8 +143,6 @@ def getWikiHistory(path: str, body: bytes) -> HTTPResponse:
 	for entry in history.data:
 		rs += '<hr><p>' + entry[0] + '</p><hr>'
 		w = wikitext.wtToHTML(entry[1].getContent())
-		w = w[w.index("<div class=\"main-content\">") + len("<div class=\"main-content\">"):w.rindex("</div>")]
-		print(w)
 		rs += w
 	return {
 		"status": 200,
