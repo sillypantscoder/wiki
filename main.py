@@ -197,6 +197,7 @@ def getEditSelect(path: str, body: bytes) -> HTTPResponse:
 		</div>
 		<div class="main-content">
 			<h3>Edit {path}</h3>
+			<p><a class="button" href="/edit/delete/{path}">Delete Page</a></p>
 			{"".join(['<p><a class="button" href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields])}
 		</div>
 	</body>
@@ -346,6 +347,40 @@ GET.then("wiki").run(getWiki)
 GET.then("wiki_history").run(getWikiHistory)
 GET.then("edit").then("select").run(getEditSelect)
 GET.after("edit").then("content").run(getEditContent)
+GET.after("edit").then("delete").run(lambda path, body: {
+	"status": 200,
+	"headers": {
+		"Content-Type": "text/html"
+	},
+	"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/{path}" class="back_link button">Cancel - Back to page</a>
+		</div>
+		<div class="main-content">
+			<h3>Are you sure you want to delete {path}</h3>
+			<p>You can still recover the page after it is deleted.</p>
+			<p>Enter a message for your changes: <input id="message"></p>
+			<p><button onclick="saveEdit()">Delete</button></p>
+		</div>
+		<script>
+function saveEdit() {{
+	var message = document.querySelector("#message").value
+	var x = new XMLHttpRequest()
+	x.open("POST", "/delete/{path}")
+	x.addEventListener("loadend", () => {{
+		document.querySelector(".back_link").click()
+	}})
+	x.send(message)
+}}
+		</script>
+	</body>
+</html>""".encode("UTF-8")
+})
 GET.then("get_data").run(getData)
 GET.then("wiki_info").then("home").run(lambda path, body: {
 	"status": 200,
@@ -458,9 +493,34 @@ def postCreate(path: str, body: bytes) -> HTTPResponse:
 		"content": b""
 	}
 
+def postDelete(path: str, body: bytes) -> HTTPResponse:
+	message = body.decode("UTF-8")
+	if len(path.split(":")) == 1:
+		# aaaaaa
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history = wiki.PageHistory.fromFile(path)
+	if history == None:
+		return {
+			"status": 404,
+			"headers": {},
+			"content": b""
+		}
+	history.appendDelete(message)
+	history.save()
+	return {
+		"status": 200,
+		"headers": {},
+		"content": b""
+	}
+
 POST = HTTPDirective()
 POST.then("edit").run(postEdit)
 POST.then("create").run(postCreate)
+POST.then("delete").run(postDelete)
 
 class MyServer(BaseHTTPRequestHandler):
 	def do_GET(self):

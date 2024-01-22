@@ -1,5 +1,6 @@
 import utils
 import json
+import math
 
 class Buffer:
 	def __init__(self, data: bytes):
@@ -115,6 +116,8 @@ class PageHistory:
 		newData = oldPage.data.copy()
 		newData[editName] = editValue
 		self.append(message, newData)
+	def appendDelete(self, message: str):
+		self.append(message, {})
 
 class Page:
 	def __init__(self, ns: Namespace, name: str, data: dict[str, bytes]):
@@ -133,9 +136,9 @@ class Page:
 			r.extend([*name.encode("UTF-8")])
 			# Write value length
 			value = self.data[name]
-			r.append(0)
-			r.append(0) # TODO: Value length is 3 bytes?
-			r.append(len(value))
+			r.append(math.floor(len(value) / (256 * 256)) % 256)
+			r.append(math.floor(len(value) / 256) % 256)
+			r.append(len(value) % 256)
 			# Write value
 			r.extend([*value])
 		return r
