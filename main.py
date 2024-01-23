@@ -7,7 +7,7 @@ import json
 import os
 
 hostName = "0.0.0.0"
-serverPort = 8086
+serverPort = 8087
 
 class HTTPResponse(typing.TypedDict):
 	status: int
@@ -101,7 +101,7 @@ def getWiki(path: str, body: bytes) -> HTTPResponse:
 			"content": b""
 		}
 	page: wiki.Page = history.mostRecent()
-	content: str = wikitext.wtToHTML(page.getContent())
+	content: str = wikitext.wtToHTML(page.getContent().decode("UTF-8"))
 	return {
 		"status": 200,
 		"headers": {
@@ -142,7 +142,7 @@ def getWikiHistory(path: str, body: bytes) -> HTTPResponse:
 	rs = ""
 	for entry in history.data:
 		rs += '<hr><p>' + entry[0] + '</p><hr>'
-		w = wikitext.wtToHTML(entry[1].getContent())
+		w = wikitext.wtToHTML(entry[1].getContent().decode("UTF-8"))
 		rs += w
 	return {
 		"status": 200,
@@ -221,49 +221,13 @@ def getEditContent(path: str, body: bytes) -> HTTPResponse:
 			"headers": {},
 			"content": b""
 		}
-	field_format = history.ns.fields[contentname]
-	if field_format == "file":
-		return {
-			"status": 200,
-			"headers": {
-				"Content-Type": "text/html"
-			},
-			"content": f"""<!DOCTYPE html>
-<html>
-	<head>
-		<link href="/style.css" rel="stylesheet">
-	</head>
-	<body>
-		<div class="sidebar">
-			<a href="/wiki/{name}" class="back_link button">Cancel - Back to page</a>
-		</div>
-		<div class="main-content">
-			<h3>Edit {contentname} of {name}</h3>
-			<p><input type="file" id="content"></p>
-			<p>Enter a message for your changes: <input id="message"></p>
-			<p><button onclick="document.querySelector('#content').files[0].text().then(saveEdit)">Save</button></p>
-		</div>
-		<script>
-function saveEdit(t) {{
-	var message = document.querySelector("#message").value
-	var x = new XMLHttpRequest()
-	x.open("POST", "/edit/{name}/{contentname}")
-	x.addEventListener("loadend", () => {{
-		document.querySelector(".back_link").click()
-	}})
-	x.send(message + "\\n" + t)
-}}
-		</script>
-	</body>
-</html>""".encode("UTF-8")
-		}
-	else:
-		return {
-			"status": 200,
-			"headers": {
-				"Content-Type": "text/html"
-			},
-			"content": f"""<!DOCTYPE html>
+	# field_format = history.ns.fields[contentname]
+	return {
+		"status": 200,
+		"headers": {
+			"Content-Type": "text/html"
+		},
+		"content": f"""<!DOCTYPE html>
 <html>
 	<head>
 		<link href="/style.css" rel="stylesheet">
@@ -301,7 +265,7 @@ function saveEdit() {{
 		</script>
 	</body>
 </html>""".encode("UTF-8")
-		}
+	}
 
 def getData(path: str, body: bytes) -> HTTPResponse:
 	name = path.split("/")[0]

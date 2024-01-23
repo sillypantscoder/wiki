@@ -4,53 +4,53 @@ import math
 import typing
 import base64
 
-def handlebars(data: str, page: "Page") -> str:
-	r = ""
+def handlebars(data: bytes, page: "Page") -> bytes:
+	r: bytes = b""
 	charno = 0
 	while charno < len(data):
 		char = data[charno]
-		if data[charno:charno + len("{{field ")] == "{{field ":
-			charno += len("{{field ")
+		if data[charno:charno + len(b"{{field ")] == b"{{field ":
+			charno += len(b"{{field ")
 			name = ""
-			while data[charno] != " ":
-				name += data[charno]
+			while bytes([data[charno]]) != b" ":
+				name += bytes([data[charno]]).decode("UTF-8")
 				charno += 1
 			charno += 1
 			defaultval = ""
-			while data[charno:charno + 2] != "}}":
-				defaultval += data[charno]
+			while data[charno:charno + 2] != b"}}":
+				defaultval += bytes([data[charno]]).decode("UTF-8")
 				charno += 1
 			charno += 1
 			# Substitute the data
 			if name in page.data.keys():
-				r += page.data[name].decode("UTF-8")
+				r += page.data[name]
 			else:
-				r += defaultval.replace("$pagename", page.name)
-		elif data[charno:charno + len("{{field64 ")] == "{{field64 ":
-			charno += len("{{field64 ")
+				r += defaultval.replace("$pagename", page.name).encode("UTF-8")
+		elif data[charno:charno + len(b"{{field64 ")] == b"{{field64 ":
+			charno += len(b"{{field64 ")
 			name = ""
-			while data[charno] != " ":
-				name += data[charno]
+			while bytes([data[charno]]).decode("UTF-8") != " ":
+				name += bytes([data[charno]]).decode("UTF-8")
 				charno += 1
 			charno += 1
 			defaultval = ""
-			while data[charno:charno + 2] != "}}":
-				defaultval += data[charno]
+			while data[charno:charno + 2] != b"}}":
+				defaultval += bytes([data[charno]]).decode("UTF-8")
 				charno += 1
 			charno += 1
 			# Substitute the data
 			if name in page.data.keys():
-				r += base64.b64encode(page.data[name]).decode("UTF-8")
+				r += base64.b64encode(page.data[name])
 			else:
-				r += base64.b64encode(defaultval.replace("$pagename", page.name).encode("UTF-8")).decode("UTF-8")
-		elif data[charno:charno + len("{{pagens}}")] == "{{pagens}}":
-			charno += len("{{pagens}}") - 1
-			r += page.ns.name
-		elif data[charno:charno + len("{{pagename}}")] == "{{pagename}}":
-			charno += len("{{pagename}}") - 1
-			r += page.name
+				r += base64.b64encode(defaultval.replace("$pagename", page.name).encode("UTF-8"))
+		elif data[charno:charno + len(b"{{pagens}}")] == b"{{pagens}}":
+			charno += len(b"{{pagens}}") - 1
+			r += page.ns.name.encode("UTF-8")
+		elif data[charno:charno + len(b"{{pagename}}")] == b"{{pagename}}":
+			charno += len(b"{{pagename}}") - 1
+			r += page.name.encode("UTF-8")
 		else:
-			r += char
+			r += bytes([char])
 		charno += 1
 	return r
 
@@ -73,20 +73,19 @@ class NSFileEntry(typing.TypedDict):
 	type: str
 	content: str
 class Namespace:
-	def __init__(self, name: str, fields: dict[str, typing.Literal["text", "file"]], defaultPage: str, content: str, files: dict[str, NSFileEntry]):
+	def __init__(self, name: str, fields: dict[str, typing.Literal["text", "file"]], defaultPage: str, content: str):
 		self.name = name
 		self.fields = fields
 		self.defaultPage = defaultPage
 		self.content = content
-		self.files = files
 	@staticmethod
 	def fromFile(name: str) -> "Namespace | None":
 		raw = utils.read_file(f"pages/{name}/ns.json")
 		if raw == None: return
 		data = json.loads(raw)
-		return Namespace(name, data["fields"], data["defaultPage"], data["content"], data["files"])
+		return Namespace(name, data["fields"], data["defaultPage"], data["content"])
 	def getContent(self, page: "Page"):
-		return handlebars(self.content, page)
+		return handlebars(self.content.encode("UTF-8"), page)
 
 class PageHistory:
 	def __init__(self, ns: Namespace, name: str, data: "list[tuple[str, Page]]"):

@@ -6,7 +6,6 @@
 			"content": "text"
 		},
 		"defaultPage": "Main_Page",
-		"content": "$END<h5 style=\"margin: 0; padding: 0; color: gray; font-weight: normal;\">{{pagens}}:{{pagename}}</h5>\n<h1 style=\"margin-top: 0;\">{{field title $pagename}}</h1>\n$START{{field content There is currently no text in this page. Press the edit button on the left to add some.}}",
-		"files": {}
+		"content": "$END<h5 style=\"margin: 0; padding: 0; color: gray; font-weight: normal;\">{{pagens}}:{{pagename}}</h5>\n<h1 style=\"margin-top: 0;\">{{field title $pagename}}</h1>\n$START{{field content There is currently no text in this page. Press the edit button on the left to add some.}}"
 	}
 }

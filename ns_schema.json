@@ -19,24 +19,6 @@
 		"content": {
 			"description": "(Handlebars-encoded string)",
 			"type": "string"
-		},
-		"files": {
-			"description": "List of additional files to host",
-			"type": "object",
-			"additionalProperties": {
-				"type": "object",
-				"properties": {
-					"type": {
-						"description": "The MIME type to serve the file with (Handlebars-encoded string)",
-						"type": "string"
-					},
-					"content": {
-						"description": "The content to send (Handlebars-encoded string)",
-						"type": "string"
-					}
-				},
-				"additionalProperties": false
-			}
 		}
 	},
 	"additionalProperties": false,
