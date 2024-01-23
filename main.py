@@ -198,7 +198,7 @@ def getEditSelect(path: str, body: bytes) -> HTTPResponse:
 		<div class="main-content">
 			<h3>Edit {path}</h3>
 			<p><a class="button" href="/edit/delete/{path}">Delete Page</a></p>
-			{"".join(['<p><a class="button" href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields])}
+			{"".join(['<p><a class="button" href="/edit/content/' + path + '/' + contentname + '">Edit ' + contentname + '</a></p>' for contentname in history.ns.fields.keys()])}
 		</div>
 	</body>
 </html>""".encode("UTF-8")
@@ -221,12 +221,49 @@ def getEditContent(path: str, body: bytes) -> HTTPResponse:
 			"headers": {},
 			"content": b""
 		}
-	return {
-		"status": 200,
-		"headers": {
-			"Content-Type": "text/html"
-		},
-		"content": f"""<!DOCTYPE html>
+	field_format = history.ns.fields[contentname]
+	if field_format == "file":
+		return {
+			"status": 200,
+			"headers": {
+				"Content-Type": "text/html"
+			},
+			"content": f"""<!DOCTYPE html>
+<html>
+	<head>
+		<link href="/style.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="sidebar">
+			<a href="/wiki/{name}" class="back_link button">Cancel - Back to page</a>
+		</div>
+		<div class="main-content">
+			<h3>Edit {contentname} of {name}</h3>
+			<p><input type="file" id="content"></p>
+			<p>Enter a message for your changes: <input id="message"></p>
+			<p><button onclick="document.querySelector('#content').files[0].text().then(saveEdit)">Save</button></p>
+		</div>
+		<script>
+function saveEdit(t) {{
+	var message = document.querySelector("#message").value
+	var x = new XMLHttpRequest()
+	x.open("POST", "/edit/{name}/{contentname}")
+	x.addEventListener("loadend", () => {{
+		document.querySelector(".back_link").click()
+	}})
+	x.send(message + "\\n" + t)
+}}
+		</script>
+	</body>
+</html>""".encode("UTF-8")
+		}
+	else:
+		return {
+			"status": 200,
+			"headers": {
+				"Content-Type": "text/html"
+			},
+			"content": f"""<!DOCTYPE html>
 <html>
 	<head>
 		<link href="/style.css" rel="stylesheet">
@@ -264,7 +301,7 @@ function saveEdit() {{
 		</script>
 	</body>
 </html>""".encode("UTF-8")
-	}
+		}
 
 def getData(path: str, body: bytes) -> HTTPResponse:
 	name = path.split("/")[0]
@@ -437,7 +474,7 @@ function create() {{
 	var message = document.querySelector("#message").value
 	var x = new XMLHttpRequest()
 	x.open("POST", "/create")
-	x.addEventListener("loadend", () => location.replace("/wiki/"+newname))
+	x.addEventListener("loadend", () => location.replace("/wiki/"+ns+":"+newname))
 	x.send(ns + "\\n" + newname + "\\n" + message)
 }}
 			</script>

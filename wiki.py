@@ -1,6 +1,58 @@
 import utils
 import json
 import math
+import typing
+import base64
+
+def handlebars(data: str, page: "Page") -> str:
+	r = ""
+	charno = 0
+	while charno < len(data):
+		char = data[charno]
+		if data[charno:charno + len("{{field ")] == "{{field ":
+			charno += len("{{field ")
+			name = ""
+			while data[charno] != " ":
+				name += data[charno]
+				charno += 1
+			charno += 1
+			defaultval = ""
+			while data[charno:charno + 2] != "}}":
+				defaultval += data[charno]
+				charno += 1
+			charno += 1
+			# Substitute the data
+			if name in page.data.keys():
+				r += page.data[name].decode("UTF-8")
+			else:
+				r += defaultval.replace("$pagename", page.name)
+		elif data[charno:charno + len("{{field64 ")] == "{{field64 ":
+			charno += len("{{field64 ")
+			name = ""
+			while data[charno] != " ":
+				name += data[charno]
+				charno += 1
+			charno += 1
+			defaultval = ""
+			while data[charno:charno + 2] != "}}":
+				defaultval += data[charno]
+				charno += 1
+			charno += 1
+			# Substitute the data
+			if name in page.data.keys():
+				r += base64.b64encode(page.data[name]).decode("UTF-8")
+			else:
+				r += base64.b64encode(defaultval.replace("$pagename", page.name).encode("UTF-8")).decode("UTF-8")
+		elif data[charno:charno + len("{{pagens}}")] == "{{pagens}}":
+			charno += len("{{pagens}}") - 1
+			r += page.ns.name
+		elif data[charno:charno + len("{{pagename}}")] == "{{pagename}}":
+			charno += len("{{pagename}}") - 1
+			r += page.name
+		else:
+			r += char
+		charno += 1
+	return r
 
 class Buffer:
 	def __init__(self, data: bytes):
@@ -17,50 +69,24 @@ class Buffer:
 	def canRead(self) -> bool:
 		return self.pos < len(self.data) - 1
 
+class NSFileEntry(typing.TypedDict):
+	type: str
+	content: str
 class Namespace:
-	def __init__(self, name: str, fields: list[str], defaultPage: str, content: str):
+	def __init__(self, name: str, fields: dict[str, typing.Literal["text", "file"]], defaultPage: str, content: str, files: dict[str, NSFileEntry]):
 		self.name = name
 		self.fields = fields
 		self.defaultPage = defaultPage
 		self.content = content
+		self.files = files
 	@staticmethod
 	def fromFile(name: str) -> "Namespace | None":
 		raw = utils.read_file(f"pages/{name}/ns.json")
 		if raw == None: return
 		data = json.loads(raw)
-		return Namespace(name, data["fields"], data["defaultPage"], data["content"])
+		return Namespace(name, data["fields"], data["defaultPage"], data["content"], data["files"])
 	def getContent(self, page: "Page"):
-		r = ""
-		charno = 0
-		while charno < len(self.content):
-			char = self.content[charno]
-			if self.content[charno:charno + len("{{field ")] == "{{field ":
-				charno += len("{{field ")
-				name = ""
-				while self.content[charno] != " ":
-					name += self.content[charno]
-					charno += 1
-				charno += 1
-				defaultval = ""
-				while self.content[charno:charno + 2] != "}}":
-					defaultval += self.content[charno]
-					charno += 1
-				charno += 1
-				# Substitute the data
-				if name in page.data.keys():
-					r += page.data[name].decode("UTF-8")
-				else:
-					r += defaultval.replace("$pagename", page.name)
-			elif self.content[charno:charno + len("{{pagens}}")] == "{{pagens}}":
-				charno += len("{{pagens}}") - 1
-				r += page.ns.name
-			elif self.content[charno:charno + len("{{pagename}}")] == "{{pagename}}":
-				charno += len("{{pagename}}") - 1
-				r += page.name
-			else:
-				r += char
-			charno += 1
-		return r
+		return handlebars(self.content, page)
 
 class PageHistory:
 	def __init__(self, ns: Namespace, name: str, data: "list[tuple[str, Page]]"):
